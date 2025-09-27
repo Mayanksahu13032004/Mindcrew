@@ -3,7 +3,12 @@ import { useEffect, useState } from "react";
 
 export default function Dashboard() {
   const [expenses, setExpenses] = useState([]);
-  const [budget, setBudget] = useState(null);
+  const [budget, setBudget] = useState({
+    totalBudget: 0,
+    spent: 0,
+    remaining: 0,
+  });
+  const [loadingBudget, setLoadingBudget] = useState(false);
   const [form, setForm] = useState({
     title: "",
     category: "",
@@ -12,7 +17,7 @@ export default function Dashboard() {
     user: "6704f23c123abc0001112222", // test user id
   });
 
-  // ✅ Fetch expenses
+  // Fetch expenses
   const fetchExpenses = async () => {
     try {
       const res = await fetch("/api/expenses");
@@ -23,23 +28,32 @@ export default function Dashboard() {
     }
   };
 
-  // ✅ Fetch budget
+  // Fetch budget
   const fetchBudget = async () => {
     try {
-      const res = await fetch("/api/budget");
+      setLoadingBudget(true);
+      const res = await fetch("/api/budget?user=6704f23c123abc0001112222");
       const data = await res.json();
-      setBudget(data);
+console.log(data);
+
+      if (Array.isArray(data) && data.length > 0) {
+        setBudget(data[0]);
+      } else {
+        setBudget({ totalBudget: 0, spent: 0, remaining: 0 });
+      }
     } catch (error) {
       console.error("Error fetching budget:", error);
+    } finally {
+      setLoadingBudget(false);
     }
   };
 
-  // ✅ Handle form input
+  // Handle form input
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // ✅ Add expense
+  // Add expense
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -51,17 +65,30 @@ export default function Dashboard() {
 
       if (!res.ok) throw new Error("Failed to add expense");
 
-      setForm({ title: "", category: "", amount: "", description: "", user: form.user });
-      fetchExpenses();
-      fetchBudget();
+      // Reset form
+      setForm({
+        title: "",
+        category: "",
+        amount: "",
+        description: "",
+        user: form.user,
+      });
+
+      // Fetch updated expenses and budget
+      await fetchExpenses();
+      await fetchBudget();
     } catch (error) {
       console.error("Error adding expense:", error);
     }
   };
 
+  // Fetch expenses & budget on mount
   useEffect(() => {
-    fetchExpenses();
-    fetchBudget();
+    const fetchData = async () => {
+      await fetchExpenses();
+      await fetchBudget();
+    };
+    fetchData();
   }, []);
 
   return (
@@ -70,27 +97,27 @@ export default function Dashboard() {
         💰 Smart Budget Tracker
       </h1>
 
-      {/* Budget Section */}
-      <div className="bg-gradient-to-r from-blue-800 to-teal-600 shadow-xl rounded-xl p-6 mb-10 border border-teal-400">
-        <h2 className="text-2xl font-semibold mb-4 text-teal-200">📊 Monthly Budget</h2>
-        {budget ? (
-          <div className="space-y-2 text-lg">
-            <p>
-              <span className="font-semibold text-white">Total Budget:</span>{" "}
-              <span className="text-teal-300">₹{budget.totalBudget}</span>
-            </p>
-            <p>
-              <span className="font-semibold text-white">Spent:</span>{" "}
-              <span className="text-red-400">₹{budget.spent}</span>
-            </p>
-            <p>
-              <span className="font-semibold text-white">Remaining:</span>{" "}
-              <span className="text-green-400">₹{budget.remaining}</span>
-            </p>
-          </div>
-        ) : (
-          <p className="text-gray-300">Loading budget...</p>
-        )}
+      {/* Monthly Budget Card */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-400 shadow-xl rounded-xl p-6 mb-10 border border-teal-400">
+        <h2 className="text-2xl font-semibold mb-4 text-white flex items-center gap-2">
+          📊 Monthly Budget
+        </h2>
+        <div className="space-y-2 text-lg">
+          <p>
+            <span className="font-semibold">Total Budget:</span>{" "}
+            <span className="text-green-300">₹{budget.totalBudget}</span>
+          </p>
+          <p>
+            <span className="font-semibold">Spent:</span>{" "}
+            <span className="text-red-400">₹{budget.spent}</span>
+          </p>
+          <p>
+            <span className="font-semibold">Remaining:</span>{" "}
+            <span className="text-green-400">
+              {loadingBudget ? "Loading..." : `₹${budget.remaining}`}
+            </span>
+          </p>
+        </div>
       </div>
 
       {/* Add Expense Form */}
