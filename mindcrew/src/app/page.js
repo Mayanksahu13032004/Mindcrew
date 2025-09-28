@@ -91,6 +91,30 @@ console.log(data);
     fetchData();
   }, []);
 
+
+// Basic overspend prediction
+const prediction = (() => {
+  if (!expenses || expenses.length === 0) return null;
+
+  const today = new Date();
+  const currentDay = today.getDate();
+  const predictionDay = 20; // day to predict overspending
+
+  const spentSoFar = expenses.reduce((acc, exp) => acc + Number(exp.amount), 0);
+  const avgDailySpend = spentSoFar / currentDay;
+  const predictedBy20th = avgDailySpend * predictionDay;
+  const willOverspend = predictedBy20th > budget.totalBudget;
+
+  return {
+    spentSoFar,
+    avgDailySpend: avgDailySpend.toFixed(2),
+    predictedBy20th: predictedBy20th.toFixed(2),
+    willOverspend,
+  };
+})();
+
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-teal-800 p-8 text-white">
       <h1 className="text-4xl font-extrabold mb-10 text-center text-teal-300 drop-shadow-lg">
@@ -119,6 +143,30 @@ console.log(data);
           </p>
         </div>
       </div>
+
+
+{/* Prediction Card */}
+{prediction && (
+  <div className={`bg-gradient-to-r p-6 mb-10 rounded-xl shadow-lg border ${
+    prediction.willOverspend ? "from-red-600 to-red-400 border-red-400" 
+                              : "from-green-600 to-green-400 border-green-400"
+  }`}>
+    <h2 className="text-xl font-semibold mb-2 text-white flex items-center gap-2">
+      📈 Budget Prediction
+    </h2>
+    <p className="text-white">
+      Predicted spending by 20th: <span className="font-bold">₹{prediction.predictedBy20th}</span>
+    </p>
+    {prediction.willOverspend ? (
+      <p className="text-red-200 font-semibold mt-1">⚠️ Warning! You might overspend this month.</p>
+    ) : (
+      <p className="text-green-200 font-semibold mt-1">✅ You are on track to stay within budget.</p>
+    )}
+  </div>
+)}
+
+
+
 
       {/* Add Expense Form */}
       <div className="bg-slate-800 shadow-lg rounded-xl p-6 mb-10 border border-slate-600">

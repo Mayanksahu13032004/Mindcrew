@@ -21,5 +21,5 @@ function predictOverspend(expenses, totalBudget) {
     avgDailySpend: avgDailySpend.toFixed(2),
     predictedBy20th: predictedBy20th.toFixed(2),
     willOverspend,
-  };
-}
+  };          
+} 
