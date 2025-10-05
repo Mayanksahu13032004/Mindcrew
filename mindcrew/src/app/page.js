@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
-import Signup from "../components/Signup";
-import Login from "../components/Login";
+import Signup from "./components/Signup";
+import Login from "./components/Login";
 
 export default function Dashboard() {
   const [selectedMonth, setSelectedMonth] = useState("2025-09");
