@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Budget from "@/models/budget";
 import Expense from "@/models/Expense";
-import { connectDB } from "@/lib/mongoose";
+import { connectDB } from "@/lib/mongoose.js";
 
 export async function GET(req) {
   try {
