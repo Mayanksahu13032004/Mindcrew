@@ -1,32 +1,27 @@
-import { NextResponse } from "next/server";
-import { connectDB } from "@/lib/mongoose.js";
+import connectDB from "@/lib/mongodb";
 import User from "@/models/User";
+import { NextResponse } from "next/server";
 
 export async function POST(req) {
   try {
+    // Skip if MongoDB URI missing (build time)
+    if (!process.env.MONGODB_URI) {
+      console.error("MONGODB_URI not set. Skipping build-time DB call.");
+      return NextResponse.json({ message: "Build check" });
+    }
+
     await connectDB();
 
     const { email, password } = await req.json();
-
-    if (!email || !password) {
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-    }
-
     const user = await User.findOne({ email });
+
     if (!user || user.password !== password) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    return NextResponse.json({
-      message: "Login successful",
-      user: {
-        id: user._id,
-        name: user.name,
-        email: user.email,
-      },
-    });
-  } catch (err) {
-    console.error("Login API error:", err);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return NextResponse.json({ message: "Login successful", user });
+  } catch (error) {
+    console.error("Login error:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
