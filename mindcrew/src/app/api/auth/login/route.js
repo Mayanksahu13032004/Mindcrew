@@ -5,6 +5,7 @@ import User from "@/models/User";
 export async function POST(req) {
   try {
     await connectDB();
+
     const { email, password } = await req.json();
 
     if (!email || !password) {
@@ -25,7 +26,7 @@ export async function POST(req) {
       },
     });
   } catch (err) {
-    console.error(err);
+    console.error("Login API error:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
