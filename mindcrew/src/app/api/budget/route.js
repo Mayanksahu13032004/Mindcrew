@@ -46,7 +46,23 @@ export async function POST(req) {
       );
     }
 
-    const budget = new Budget({
+    // Check if a budget already exists for the same user and month
+    let existingBudget = await Budget.findOne({ userId, month });
+
+    if (existingBudget) {
+      // Add the new amount to existing totalBudget and update remaining
+      existingBudget.totalBudget += Number(totalBudget);
+      existingBudget.remaining += Number(totalBudget);
+      await existingBudget.save();
+
+      return NextResponse.json({
+        message: "Budget updated successfully",
+        budget: existingBudget,
+      });
+    }
+
+    // If no existing budget, create a new one
+    const newBudget = new Budget({
       userId,
       totalBudget,
       spent: 0,
@@ -54,10 +70,14 @@ export async function POST(req) {
       month,
     });
 
-    await budget.save();
-    return NextResponse.json(budget);
+    await newBudget.save();
+    return NextResponse.json({
+      message: "New budget created successfully",
+      budget: newBudget,
+    });
   } catch (error) {
     console.error("POST Budget Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+

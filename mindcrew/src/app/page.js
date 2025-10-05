@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import Signup from "./components/Signup";
 import Login from "./components/Login";
+import toast, { Toaster } from "react-hot-toast";
 
 export default function Dashboard() {
   const [selectedMonth, setSelectedMonth] = useState("2025-09");
@@ -27,14 +28,19 @@ export default function Dashboard() {
     month: selectedMonth,
   });
 
-  // --- Auth Handlers ---
+  // ✅ Auth Success Handler
   const handleAuthSuccess = (user) => {
     if (user && user._id) {
+      localStorage.setItem(
+        "user",
+        JSON.stringify({ id: user._id, name: user.name })
+      );
       setCurrentUserId(user._id);
       setUserName(user.name);
       setIsLoggedIn(true);
       setActiveForm(null);
 
+      toast.success(`Welcome, ${user.name.split(" ")[0]}! 🎉`);
       fetchExpenses(user._id, selectedMonth);
       fetchBudget(user._id, selectedMonth);
     }
@@ -47,9 +53,10 @@ export default function Dashboard() {
     setIsLoggedIn(false);
     setBudget({ totalBudget: 0, spent: 0, remaining: 0, month: "" });
     setExpenses([]);
+    toast.success("Logged out successfully 👋");
   };
 
-  // --- Fetch Functions ---
+  // ✅ Fetch Functions
   const fetchExpenses = async (userId = currentUserId, month = selectedMonth) => {
     if (!userId) return;
     try {
@@ -58,6 +65,7 @@ export default function Dashboard() {
       setExpenses(data);
     } catch (error) {
       console.error("Error fetching expenses:", error);
+      toast.error("Failed to load expenses ❌");
     }
   };
 
@@ -75,6 +83,7 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error("Error fetching budget:", error);
+      toast.error("Failed to load budget ❌");
     } finally {
       setLoadingBudget(false);
     }
@@ -87,43 +96,33 @@ export default function Dashboard() {
     }
   }, [selectedMonth, currentUserId]);
 
-  // --- Utility: Allow adding expenses only for current or next 3 months ---
+  // ✅ Allow current + next 3 months only
   const isMonthWithinAllowedRange = (monthStr) => {
     const selected = new Date(monthStr + "-01");
     const now = new Date();
-
-    // Range: current month → next 3 months
     const min = new Date(now.getFullYear(), now.getMonth(), 1);
     const max = new Date(now.getFullYear(), now.getMonth() + 3, 1);
-
     return selected >= min && selected <= max;
   };
 
-  // --- Expense Handlers ---
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  // ✅ Expense Handlers
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const userIdToUse = currentUserId;
-
     if (!userIdToUse) {
-      alert("Please log in to add expenses.");
+      toast.error("Please log in to add expenses.");
       return;
     }
-
     if (form.month !== selectedMonth) {
-      alert("❌ The expense month must match the selected budget month.");
+      toast.error(" Expense month must match selected budget month.");
       return;
     }
-
-    // Prevent adding for past months
     if (!isMonthWithinAllowedRange(selectedMonth)) {
-      alert("❌ You can only add expenses for the current or next 3 months.");
+      toast.error(" Only current or next 3 months allowed.");
       return;
     }
-
     try {
       const res = await fetch("/api/expenses", {
         method: "POST",
@@ -145,16 +144,59 @@ export default function Dashboard() {
         description: "",
         month: selectedMonth,
       });
-
       await fetchExpenses(userIdToUse, selectedMonth);
       await fetchBudget(userIdToUse, selectedMonth);
+      toast.success(" Expense added successfully!");
     } catch (error) {
       console.error("Error adding expense:", error);
-      alert(`Could not add expense: ${error.message}`);
+      toast.error(`Failed to add expense: ${error.message}`);
     }
   };
 
-  // --- On Page Load ---
+  // ✅ Set Budget Handler
+const handleSetBudget = async (e) => {
+  e.preventDefault();
+  if (!currentUserId) {
+    toast.error("Please log in to set a budget.");
+    return;
+  }
+
+  // 🧠 Check if selected month is allowed (current or next 3 months only)
+  if (!isMonthWithinAllowedRange(selectedMonth)) {
+    toast.error(" You can only set budgets for the current or next 3 months.");
+    return;
+  }
+
+  const totalBudget = e.target.totalBudget.value;
+  if (!totalBudget || totalBudget <= 0) {
+    toast.error("Please enter a valid budget amount.");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/budget", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: currentUserId,
+        totalBudget: Number(totalBudget),
+        month: selectedMonth,
+      }),
+    });
+
+    if (!res.ok) throw new Error("Failed to set budget");
+
+    await fetchBudget(currentUserId, selectedMonth);
+    e.target.reset();
+    toast.success("Budget set successfully!");
+  } catch (error) {
+    console.error("Error setting budget:", error);
+    toast.error(`Could not set budget: ${error.message}`);
+  }
+};
+
+
+  // ✅ Auto Login on Page Load
   useEffect(() => {
     const userJson = localStorage.getItem("user");
     let initialUserId = null;
@@ -166,6 +208,7 @@ export default function Dashboard() {
         setCurrentUserId(initialUserId);
         setUserName(userData.name);
         setIsLoggedIn(true);
+        toast.success(`Welcome back, ${userData.name.split(" ")[0]}! 👋`);
       } catch (e) {
         localStorage.removeItem("user");
       }
@@ -177,24 +220,16 @@ export default function Dashboard() {
     }
   }, []);
 
-  // --- Prediction ---
+  // ✅ Prediction Section
   const prediction = (() => {
     const totalBudget = Number(budget.totalBudget);
     if (!expenses || expenses.length === 0 || totalBudget === 0) return null;
 
     const today = new Date();
     const currentDay = today.getDate();
-    const daysInMonth = new Date(
-      today.getFullYear(),
-      today.getMonth() + 1,
-      0
-    ).getDate();
+    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
 
-    const spentSoFar = expenses.reduce(
-      (acc, exp) => acc + Number(exp.amount),
-      0
-    );
-
+    const spentSoFar = expenses.reduce((acc, exp) => acc + Number(exp.amount), 0);
     const avgDailySpend = spentSoFar / currentDay;
     const predictedTotalSpend = avgDailySpend * daysInMonth;
     const willOverspend = predictedTotalSpend > totalBudget;
@@ -211,6 +246,8 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-teal-800 p-8 text-white">
+      <Toaster position="top-right" reverseOrder={false} />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-4xl font-extrabold text-teal-300 drop-shadow-lg">
@@ -247,7 +284,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Modal Login/Signup */}
+      {/* Login/Signup Modal */}
       {activeForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 backdrop-blur-sm">
           <div className="w-full max-w-lg p-8 rounded-xl relative">
@@ -257,12 +294,8 @@ export default function Dashboard() {
             >
               &times;
             </button>
-            {activeForm === "login" && (
-              <Login onLoginSuccess={handleAuthSuccess} />
-            )}
-            {activeForm === "signup" && (
-              <Signup onSignupSuccess={handleAuthSuccess} />
-            )}
+            {activeForm === "login" && <Login onLoginSuccess={handleAuthSuccess} />}
+            {activeForm === "signup" && <Signup onSignupSuccess={handleAuthSuccess} />}
           </div>
         </div>
       )}
@@ -273,7 +306,6 @@ export default function Dashboard() {
           📊 Monthly Budget
         </h2>
 
-        {/* Month Picker */}
         <input
           type="month"
           value={selectedMonth}
@@ -312,7 +344,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Prediction Card */}
+      {/* Prediction */}
       {prediction && (
         <div
           className={`bg-gradient-to-r p-6 mb-10 rounded-xl shadow-lg border ${
@@ -340,7 +372,35 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Add Expense Form */}
+      {/* --- New Section: Set Monthly Budget --- */}
+      <div className="bg-slate-800 shadow-lg rounded-xl p-6 mb-10 border border-slate-600">
+        <h2 className="text-xl font-semibold mb-2 text-teal-300">
+          💵 Set Monthly Budget
+        </h2>
+        {isLoggedIn ? (
+          <form onSubmit={handleSetBudget} className="space-y-4">
+            <input
+              type="number"
+              name="totalBudget"
+              placeholder="Enter total budget for this month"
+              className="w-full p-3 bg-slate-700 border border-slate-500 rounded-lg focus:ring-2 focus:ring-teal-400 focus:outline-none text-white"
+              required
+            />
+            <button
+              type="submit"
+              className="w-full p-3 bg-gradient-to-r from-green-600 to-teal-500 rounded-lg font-semibold text-white hover:opacity-90 transition"
+            >
+              Set Budget
+            </button>
+          </form>
+        ) : (
+          <p className="text-gray-400 text-center">
+            Please log in to set a budget.
+          </p>
+        )}
+      </div>
+
+      {/* --- Add Expense Section --- */}
       <div className="bg-slate-800 shadow-lg rounded-xl p-6 mb-10 border border-slate-600">
         <h2 className="text-xl font-semibold mb-2 text-teal-300">
           ➕ Add Expense
@@ -371,7 +431,6 @@ export default function Dashboard() {
               required
               disabled={!canAddExpense}
             />
-
             <input
               type="month"
               name="month"
@@ -381,7 +440,6 @@ export default function Dashboard() {
               required
               disabled={!canAddExpense}
             />
-
             <input
               type="number"
               name="amount"

@@ -1,4 +1,4 @@
- import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 import { connectDB } from "@/lib/mongoose.js";
 
@@ -7,56 +7,56 @@ import User from "@/models/User";
 
 
 export async function POST(req) {
- try {
+    try {
 
-    await connectDB();
-
-
-
-    const { email, password } = await req.json();
+        await connectDB();
 
 
 
-    if (!email || !password) {
-
-      return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-
-    }
+        const { email, password } = await req.json();
 
 
 
-    const user = await User.findOne({ email });
+        if (!email || !password) {
 
-    if (!user || user.password !== password) {
+            return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
-
-    }
+        }
 
 
 
-    return NextResponse.json({
+        const user = await User.findOne({ email });
 
-      message: "Login successful",
+        if (!user || user.password !== password) {
 
-      user: {
+            return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
 
-        id: user._id,
+        }
 
-        name: user.name,
 
-        email: user.email,
 
-      },
+        return NextResponse.json({
 
-    });
+            message: "Login successful",
 
-  } catch (err) {
+            user: {
 
-    console.error("Login API error:", err);
+                id: user._id,
 
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+                name: user.name,
 
-  }
+                email: user.email,
+
+            },
+
+        });
+
+    } catch (err) {
+
+        console.error("Login API error:", err);
+
+        return NextResponse.json({ error: "Server error" }, { status: 500 });
+
+    }
 
 }

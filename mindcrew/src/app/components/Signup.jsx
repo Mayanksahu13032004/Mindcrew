@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import toast from "react-hot-toast";
+
 
 export default function Signup() {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
@@ -20,12 +22,15 @@ export default function Signup() {
 
       if (res.ok) {
         localStorage.setItem("user", JSON.stringify(data.user));
-        setMessage("Signup successful!");
+toast.success(" SignUp successful!");
+
       } else {
-        setMessage(data.error || "Signup failed");
+      toast.error(data.error || " SignUp failed");
+
       }
     } catch (err) {
-      setMessage("Something went wrong");
+     toast.error("⚠️ Something went wrong!");
+
       console.error(err);
     }
   };

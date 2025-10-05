@@ -2,6 +2,8 @@
 import { useState } from "react";
 import { useRouter ,router} from 'next/navigation';
 // import { Router } from "next/router"; 
+import toast from "react-hot-toast";
+
 
 export default function Login() {
 
@@ -24,13 +26,14 @@ export default function Login() {
 
       if (res.ok) {
         localStorage.setItem("user", JSON.stringify(data.user));
-        setMessage("Login successful!");
+        toast.success(" Login successful!");
+
          router.push('/'); 
       } else {
-        setMessage(data.error || "Login failed");
+         toast.error(data.error || " Login failed");
       }
     } catch (err) {
-      setMessage("Something went wrong");
+      toast.error("⚠️ Something went wrong!");
       console.error(err);
     }
   };
